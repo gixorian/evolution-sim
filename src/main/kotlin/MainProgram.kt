@@ -52,8 +52,6 @@ fun main() = application {
         val numCreatureTypes = Random.nextInt(10, 30)
         val numCreatures = MAX_CREATURES / numCreatureTypes
 
-        var t = 0
-
         creatures = generateCreatures(numCreatureTypes, numCreatures)
         consumables = generateConsumables(CONSUMABLE_TYPES, CONSUMABLES_PER_PATCH, CONSUMABLE_PATCHES, CONSUMABLE_PATCH_SIZE)
 
