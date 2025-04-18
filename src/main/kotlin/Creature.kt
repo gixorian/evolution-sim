@@ -5,6 +5,7 @@ import org.openrndr.shape.Shape
 import kotlin.random.Random
 
 data class Creature(
+
     override var position: Vector2,
     override var radius: Double,
     override var myShape: Shape,
@@ -29,7 +30,9 @@ data class Creature(
     var currAttackCooldown: Double = 0.0,
     var energy: Double,
     var behaviourBias: Int,
-    var behaviourBiasWeight: Double
+    var behaviourBiasWeight: Double,
+    val dna: DNA
+
 ) : Entity {
 
     fun attack (other: Entity) {
@@ -42,7 +45,7 @@ data class Creature(
             if(other is Creature) {
                 deadCreatures.add(other)
                 // Generate food when a creature dies
-                consumables.addAll(generateConsumables(1, (other.mass * 0.5).toInt(), 1, other.radius, other.position, other.fillC))
+                consumables.addAll(generateConsumables(1, (other.mass * 0.5).toInt(), 1, other.radius, other.position, other.fillC, other.speciesName))
             } else if (other is Consumable) {
                 deadConsumables.add(other)
             }

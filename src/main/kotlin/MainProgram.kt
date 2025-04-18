@@ -2,7 +2,10 @@ import kotlinx.coroutines.*
 import org.openrndr.application
 import org.openrndr.color.ColorRGBa
 import org.openrndr.draw.Drawer
+import org.openrndr.draw.Writer
 import org.openrndr.draw.loadFont
+import org.openrndr.draw.writer
+import org.openrndr.extra.color.presets.ANTIQUE_WHITE
 import org.openrndr.extra.noise.random
 import org.openrndr.extra.shadestyles.RadialGradient
 import org.openrndr.launch
@@ -10,19 +13,21 @@ import org.openrndr.math.Vector2
 import org.openrndr.math.transforms.transform
 import org.openrndr.shape.*
 import org.openrndr.writer
+import java.awt.SystemColor.text
 import kotlin.math.*
 import kotlin.random.Random
 
+const val SCREEN_WIDTH = 1600
+const val SCREEN_HEIGHT = 900
+
+const val CANVAS_WIDTH = 1400
+const val CANVAS_HEIGHT = 750
+
+val CANVAS_ORIGIN = Vector2(SCREEN_WIDTH.toDouble() - CANVAS_WIDTH.toDouble(), 0.0)
+
 const val MAX_CREATURES = 250
-var SCREEN_WIDTH = 1800
-var SCREEN_HEIGHT = 900
 const val CELL_SIZE = 5.0
 const val SIMULATION_SPEED = 1.0
-
-val HEALTH_MULT_RANGE = Pair(5.0, 10.0)
-val DAMAGE_MULT_RANGE = Pair(0.5, 1.0)
-val ATTACK_COOLDOWN_MULT_RANGE = Pair(15.0, 25.0)
-val SPEED_MULT_RANGE = Pair(40.0, 60.0)
 
 val grid = mutableMapOf<Pair<Int, Int>, MutableList<Entity>>()
 var creatures = mutableListOf<Creature>()
@@ -30,13 +35,14 @@ var consumables = mutableListOf<Consumable>()
 val deadCreatures = mutableListOf<Creature>()
 val deadConsumables = mutableListOf<Consumable>()
 
+var selectedEntity: Entity? = null
+
 fun main() = application {
     configure {
         width = SCREEN_WIDTH
         height = SCREEN_HEIGHT
 
         vsync = false
-        windowResizable = true
     }
 
     program {
@@ -52,7 +58,6 @@ fun main() = application {
         val numCreatureTypes = Random.nextInt(10, 30)
         val numCreatures = MAX_CREATURES / numCreatureTypes
 
-        var t = 0
 
         creatures = generateCreatures(numCreatureTypes, numCreatures)
         consumables = generateConsumables(CONSUMABLE_TYPES, CONSUMABLES_PER_PATCH, CONSUMABLE_PATCHES, CONSUMABLE_PATCH_SIZE)
@@ -67,17 +72,19 @@ fun main() = application {
         mouse.buttonUp.listen {
             creatures.forEach { c ->
                 if (isPointInCircle(mouse.position, c)) {
-                    println("Creature: ${c.speciesName}")
+                    selectedEntity = c
                     return@listen
                 }
             }
 
             consumables.forEach { c ->
                 if (isPointInCircle(mouse.position, c)) {
-                    println("Consumable: ${c.speciesName}")
+                    selectedEntity = c
                     return@listen
                 }
             }
+
+            selectedEntity = null
         }
 
         // Background gradient
@@ -89,9 +96,6 @@ fun main() = application {
         )
 
         extend {
-
-            SCREEN_WIDTH = width
-            SCREEN_HEIGHT = height
 
             currSeconds = seconds
 
@@ -109,8 +113,6 @@ fun main() = application {
                     newLine()
                     text("All creatures died!")
                 }
-
-
                 return@extend
             }
 
@@ -120,6 +122,7 @@ fun main() = application {
             drawer.shadeStyle = gradient
             drawer.rectangle(-5.0, -5.0, width.toDouble()+10.0, height.toDouble()+10.0)
             drawer.shadeStyle = null
+
 
             // Populating the grid cells with the creatures that are inside each cell
             grid.clear()
@@ -136,8 +139,7 @@ fun main() = application {
                 sightRadius = debug,
                 targetsInRange = debug,
                 drawGrid = drawGrid,
-                intersections = drawIntersections,
-                drawFPS = drawFPS
+                intersections = drawIntersections
             )
 
             // Process creatures concurrently
@@ -165,6 +167,54 @@ fun main() = application {
 
             // Draw the creatures and consumables
             drawGraphics(drawer)
+
+            // Draw the GUI
+            drawer.strokeWeight = 1.0
+            drawer.stroke = ColorRGBa.fromHex("#262b2e")
+            drawer.fill = ColorRGBa.fromHex("#353C40")
+            // Sidebar
+            drawer.rectangle(-2.0, -2.0, CANVAS_ORIGIN.x+2.0, SCREEN_HEIGHT.toDouble()+4.0)
+            drawer.fill = ColorRGBa.ANTIQUE_WHITE
+            // Bottom bar
+            drawer.rectangle(SCREEN_WIDTH - CANVAS_WIDTH.toDouble() - 2.0, CANVAS_HEIGHT.toDouble(), SCREEN_WIDTH.toDouble(), SCREEN_HEIGHT.toDouble() +2.0)
+
+            // Write the information of the selected Entity
+            if(selectedEntity != null) {
+                drawer.fill = ColorRGBa.BLACK
+                drawer.fontMap = loadFont("data/fonts/default.otf", 20.0)
+
+                writer {
+                    box = Rectangle(
+                        SCREEN_WIDTH - CANVAS_WIDTH.toDouble() - 2.0,
+                        CANVAS_HEIGHT.toDouble(),
+                        SCREEN_WIDTH.toDouble(),
+                        SCREEN_HEIGHT.toDouble() + 2.0
+                    )
+
+                    if (selectedEntity is Creature) {
+                        newLine()
+                        text("Species: ${(selectedEntity as Creature).speciesName} \t\t\t Health: ${(selectedEntity as Creature).health}")
+                        newLine()
+                        text("Damage: ${(selectedEntity as Creature).damage} \t\t\t Energy: ${(selectedEntity as Creature).energy}")
+                        newLine()
+                        text("Mass: ${(selectedEntity as Creature).mass} \t\t\t Attack Cooldown: ${(selectedEntity as Creature).currAttackCooldown}")
+                    } else if (selectedEntity is Consumable) {
+                        newLine()
+                        text("Species: ${(selectedEntity as Consumable).speciesName} \t\t\t Health: ${(selectedEntity as Consumable).health}")
+                        newLine()
+                        text("Damage: ${(selectedEntity as Consumable).damage} \t\t\t Mass: ${(selectedEntity as Consumable).mass}")
+                        newLine()
+                        text("Nutrition: ${(selectedEntity as Consumable).nutrition}")
+                    } else {
+                        newLine()
+                        text("Species: \tHealth: ")
+                        newLine()
+                        text("Damage: \tMass: ")
+                        newLine()
+                        text("Energy: \tAttack Cooldown: ")
+                    }
+                }
+            }
 
             // Display FPS
             if(drawFPS) {

@@ -1,7 +1,7 @@
-17:18:24.261 [main] INFO  org.openrndr.internal.gl3.ApplicationGLFWGL3 - 3.4.0 Win32 WGL Null EGL OSMesa VisualC DLL
-17:18:24.587 [main] INFO  org.openrndr.Application - no preload class found 'org.openrndr.Preload'
-17:18:24.603 [main] INFO  org.openrndr.internal.gl3.ApplicationGLFWGL3 - OpenGL vendor: NVIDIA Corporation
-17:18:24.603 [main] INFO  org.openrndr.internal.gl3.ApplicationGLFWGL3 - OpenGL renderer: NVIDIA GeForce RTX 3090/PCIe/SSE2
-17:18:24.603 [main] INFO  org.openrndr.internal.gl3.ApplicationGLFWGL3 - OpenGL version: 4.6.0 NVIDIA 566.36
-17:18:24.908 [main] WARN  org.openrndr.internal.gl3.ShaderUniformsGL3 - Shader 'shade-style-default:expansion' does not have a uniform called 'bounds'
-17:18:24.924 [main] WARN  org.openrndr.internal.gl3.ShaderUniformsGL3 - Shader 'shade-style-default:expansion' does not have a uniform called 'bounds'
+19:35:14.507 [main] INFO  org.openrndr.internal.gl3.ApplicationGLFWGL3 - 3.4.0 Win32 WGL Null EGL OSMesa VisualC DLL
+19:35:14.810 [main] INFO  org.openrndr.Application - no preload class found 'org.openrndr.Preload'
+19:35:14.826 [main] INFO  org.openrndr.internal.gl3.ApplicationGLFWGL3 - OpenGL vendor: NVIDIA Corporation
+19:35:14.826 [main] INFO  org.openrndr.internal.gl3.ApplicationGLFWGL3 - OpenGL renderer: NVIDIA GeForce RTX 3090/PCIe/SSE2
+19:35:14.827 [main] INFO  org.openrndr.internal.gl3.ApplicationGLFWGL3 - OpenGL version: 4.6.0 NVIDIA 566.36
+19:35:15.124 [main] WARN  org.openrndr.internal.gl3.ShaderUniformsGL3 - Shader 'shade-style-default:expansion' does not have a uniform called 'bounds'
+19:35:15.140 [main] WARN  org.openrndr.internal.gl3.ShaderUniformsGL3 - Shader 'shade-style-default:expansion' does not have a uniform called 'bounds'
