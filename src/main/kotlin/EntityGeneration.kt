@@ -1,16 +1,17 @@
 import org.openrndr.color.ColorRGBa
 import org.openrndr.math.Vector2
+import org.openrndr.panel.elements.Canvas
 import org.openrndr.shape.Circle
 import java.lang.Math.random
 import kotlin.random.Random
 
 
-const val CONSUMABLE_TYPES = 10
-const val CONSUMABLES_PER_PATCH = 10
-const val CONSUMABLE_PATCHES = 80
-const val CONSUMABLE_PATCH_SIZE = 50.0
+const val CONSUMABLE_TYPES = 5
+const val CONSUMABLES_PER_PATCH = 5
+const val CONSUMABLE_PATCHES = 10
+const val CONSUMABLE_PATCH_SIZE = 100.0
 
-fun generateConsumables (numConsumablesTypes: Int, numConsumablesPerPatch: Int, numConsumablePatches: Int = 1, patchSize: Double = SCREEN_HEIGHT.toDouble(), spawnPosition: Vector2? = null, color: ColorRGBa? = null): MutableList<Consumable> {
+fun generateConsumables (numConsumablesTypes: Int, numConsumablesPerPatch: Int, numConsumablePatches: Int = 1, patchSize: Double = CANVAS_HEIGHT.toDouble(), spawnPosition: Vector2? = null, color: ColorRGBa? = null, species: String? = null): MutableList<Consumable> {
     val newConsumables = mutableListOf<Consumable>()
 
     val consumableTypes = mutableListOf<ConsumableType>()
@@ -18,19 +19,20 @@ fun generateConsumables (numConsumablesTypes: Int, numConsumablesPerPatch: Int, 
     for (i in 0 until numConsumablesTypes) {
 
         val radius = Random.nextDouble(4.0, 8.0)
-        val mass = radius * Random.nextDouble(0.75, 1.25)
+        val mass = radius * Random.nextDouble(0.8, 1.2)
 
         val newColor = color ?: ColorRGBa(random(), random(), random())
+        val speciesName = species ?: generatePlantGenusSpeciesName()
 
         val t = ConsumableType(
             radius = Random.nextDouble(3.0, 5.0),
             strokeC = newColor,
             myShape = Circle(0.0, 0.0, radius).shape,
-            health = mass * Random.nextDouble(2.0, 5.0),
+            health = mass * Random.nextDouble(0.1, 0.5),
             damage = 0.0,
             nutrition = mass * Random.nextDouble(1.0, 2.0),
             mass = mass,
-            speciesName = generatePlantGenusSpeciesName()
+            speciesName = speciesName
         )
 
         consumableTypes.add(t)
@@ -43,8 +45,8 @@ fun generateConsumables (numConsumablesTypes: Int, numConsumablesPerPatch: Int, 
         val centerPos =
             spawnPosition
                 ?: Vector2(
-                    Random.nextDouble(patchSize + consumableType.radius, SCREEN_WIDTH.toDouble() - patchSize - consumableType.radius),
-                    Random.nextDouble(patchSize + consumableType.radius, SCREEN_HEIGHT.toDouble() - patchSize - consumableType.radius)
+                    Random.nextDouble(CANVAS_ORIGIN.x + (patchSize + consumableType.radius), CANVAS_ORIGIN.x + CANVAS_WIDTH - patchSize - consumableType.radius),
+                    Random.nextDouble(CANVAS_ORIGIN.y + (patchSize + consumableType.radius), CANVAS_ORIGIN.y + CANVAS_HEIGHT - patchSize - consumableType.radius)
                 )
 
         for (j in 0 until numConsumablesPerPatch) {
@@ -73,35 +75,48 @@ fun generateConsumables (numConsumablesTypes: Int, numConsumablesPerPatch: Int, 
     return newConsumables
 }
 
-fun generateCreatures(numCreatureTypes: Int, numCreatures: Int, posRange: Pair<Vector2, Vector2> = Pair(Vector2.ZERO, Vector2(SCREEN_WIDTH.toDouble(), SCREEN_HEIGHT.toDouble()))): MutableList<Creature> {
+fun quadraticInverse (controlValue: Double, modifier: Double, controlRange: Pair<Double, Double>, modifierRange: Pair<Double, Double>, outputRange: Pair<Double, Double>): Double {
+
+    val speedFactor = outputRange.first +  (1.0 - ((controlValue - controlRange.first) / (controlRange.second - controlRange.first))) * (outputRange.second - outputRange.first)
+    val randomVariation = modifier * (modifierRange.second - modifierRange.first) + modifierRange.first
+    return speedFactor * randomVariation
+}
+
+
+fun generateCreatures(numCreatureTypes: Int, numCreatures: Int, posRange: Pair<Vector2, Vector2> = Pair(Vector2(CANVAS_ORIGIN.x, CANVAS_ORIGIN.y), Vector2(CANVAS_ORIGIN.x + CANVAS_WIDTH, CANVAS_ORIGIN.y + CANVAS_HEIGHT))): MutableList<Creature> {
 
     val newCreatures = mutableListOf<Creature>()
 
     for (i in 0 until numCreatureTypes) {
 
-        val radius = Random.nextDouble(10.0, 30.0)
-        val speed = (radius / Random.nextDouble(SPEED_MULT_RANGE.first, SPEED_MULT_RANGE.second)) * SIMULATION_SPEED
-        val strokeC = ColorRGBa(random(), random(), random())
-        val changeDirectionCooldown = Random.nextInt(12, 24) //Random.nextInt(60, 120)
-        val sightDistance = Random.nextDouble(radius + 15.0, radius + 200.0)
-        val sightRadius = Random.nextDouble(10.0, 120.0)
+        val dna = randomDNA()
+
+        val radius = dna.genes.getValue("radius").value as Double
+        val speedModifier = dna.genes.getValue("speedModifier").value as Double
+        val speed = quadraticInverse(radius, speedModifier, RADIUS_RANGE, SPEED_MODIFIER_RANGE, SPEED_RANGE) //speedFactor * randomVariation
+
         val morphSpeed = speed/20.0
         val myShape = Circle(0.0, 0.0, radius).shape
         val  blobMorphState  =  BlobMorphState(
-            generateBlob(Vector2(SCREEN_WIDTH / 2.0, SCREEN_HEIGHT/2.0), radius, 8),
-            generateBlob(Vector2(SCREEN_WIDTH / 2.0, SCREEN_HEIGHT/2.0), radius, 16),
+            generateBlob(Vector2(CANVAS_ORIGIN.x + CANVAS_WIDTH / 2.0, CANVAS_ORIGIN.y + CANVAS_HEIGHT/2.0), radius, 8),
+            generateBlob(Vector2(CANVAS_ORIGIN.x + CANVAS_WIDTH / 2.0, CANVAS_ORIGIN.y + CANVAS_HEIGHT/2.0), radius, 16),
             0.0
         )
-        val mass = radius * Random.nextDouble(0.75, 1.25)
-        val health = mass * Random.nextDouble(HEALTH_MULT_RANGE.first, HEALTH_MULT_RANGE.second)
-        val damage = mass * Random.nextDouble(DAMAGE_MULT_RANGE.first, DAMAGE_MULT_RANGE.second)
-        val attackCooldown = (mass / Random.nextDouble(ATTACK_COOLDOWN_MULT_RANGE.first, ATTACK_COOLDOWN_MULT_RANGE.second)) / 5.0
-        val energy = mass * Random.nextDouble(5.0, 20.0)
-        val behaviourBias = Random.nextInt(0, 3)
+
+        val primaryColor = ColorRGBa(
+            dna.genes.getValue("colorR").value as Double,
+            dna.genes.getValue("colorG").value as Double,
+            dna.genes.getValue("colorB").value as Double
+        )
+
+        val mass = radius * dna.genes.getValue("massModifier").value as Double
+
         val speciesName = generateBlobGenusSpeciesName()
 
         for (j in 0 until numCreatures) {
+
             val c = Creature(
+                dna = dna,
                 direction = Vector2(
                     Random.nextDouble(-1.0, 1.0001),
                     Random.nextDouble(-1.0, 1.0001)
@@ -114,21 +129,21 @@ fun generateCreatures(numCreatureTypes: Int, numCreatures: Int, posRange: Pair<V
                 radius = radius,
                 myShape = myShape,
                 intersections = emptyList(),
-                strokeC = strokeC,
-                fillC = strokeC,
+                strokeC = primaryColor,
+                fillC = primaryColor,
                 blobMorphState = blobMorphState,
-                changeDirectionCooldown = changeDirectionCooldown,
-                sightDistance = sightDistance,
-                sightRadius = sightRadius,
+                changeDirectionCooldown = dna.genes.getValue("changeDirectionCooldown").value as Int,
+                sightDistance = dna.genes.getValue("sightDistance").value as Double,
+                sightRadius = dna.genes.getValue("sightRadius").value as Double,
                 targetsInRange = mutableListOf(),
                 morphSpeed = morphSpeed,
-                health = health,
-                damage = damage,
-                attackCooldown = attackCooldown,
-                energy = energy,
+                health = mass * dna.genes.getValue("healthModifier").value as Double,
+                damage = mass * dna.genes.getValue("damageModifier").value as Double,
+                attackCooldown = dna.genes.getValue("attackCooldown").value as Double,
+                energy = mass * dna.genes.getValue("energyModifier").value as Double,
                 mass = mass,
-                behaviourBias = behaviourBias,
-                behaviourBiasWeight = Random.nextDouble(0.5, 1.01),
+                behaviourBias = dna.genes.getValue("behaviourBias").value as Int,
+                behaviourBiasWeight = dna.genes.getValue("behaviourBiasWeight").value as Double,
                 speciesName = speciesName
             )
 
