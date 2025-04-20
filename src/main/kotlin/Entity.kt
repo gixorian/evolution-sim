@@ -9,8 +9,7 @@ interface Entity {
     var myShape: Shape
     var intersections: List<ContourIntersection>
     var isAlive: Boolean
-    var fillC: ColorRGBa
-    var strokeC: ColorRGBa
+    var primaryColor: ColorRGBa
     var health: Double
     var damage: Double
     var mass: Double

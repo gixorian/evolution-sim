@@ -1,13 +1,9 @@
 import org.openrndr.color.ColorRGBa
 import org.openrndr.draw.Drawer
 import org.openrndr.draw.LineCap
+import org.openrndr.draw.loadFont
 import org.openrndr.math.Vector2
 import org.openrndr.shape.contour
-
-var lastTime = 0.0
-var fps = 0.0
-var frameC = 0
-var currSeconds = 0.0
 
 fun drawTargetLines(drawer: Drawer, creature: Creature, opacity: Double = 0.35, strokeWeight: Double = 0.25){
     if (creature.targetsInRange.isEmpty()) return
@@ -24,7 +20,7 @@ fun drawTargetLines(drawer: Drawer, creature: Creature, opacity: Double = 0.35, 
             drawer.stroke = ColorRGBa.RED.opacify(opacity * 2.0)
             drawer.strokeWeight = 1.5
         } else {
-            drawer.stroke = creature.strokeC.opacify(opacity)
+            drawer.stroke = creature.primaryColor.opacify(opacity)
             drawer.strokeWeight = strokeWeight
         }
 
@@ -90,10 +86,29 @@ fun drawGrid(drawer: Drawer) {
     }
 }
 
+var lastTime = 0.0
+var fps = 0.0
+var frameC = 0
+var currSeconds = 0.0
+
+fun drawFPS(drawer: Drawer, seconds: Double) {
+    frameC++
+    if (seconds - lastTime >= 0.25) { // Update once per second
+        fps = frameC.toDouble() / 0.25 // FPS is simply the number of frames per second
+        frameC = 0 // Reset frame count after calculating FPS
+        lastTime = seconds // Reset the last time
+    }
+
+    drawer.fill = ColorRGBa.BLACK
+    drawer.fontMap = loadFont("data/fonts/default.otf", 16.0)
+    drawer.text("FPS: ${"%.1f".format(fps)}", CANVAS_ORIGIN.x + 5.0, CANVAS_ORIGIN.y + 15.0)
+}
+
 // Function for drawing various debugging helpers
-fun drawDebug(drawer: Drawer, intersections: Boolean = false, direction: Boolean = false, sightRadius: Boolean = false, targetsInRange: Boolean = false, drawGrid: Boolean = false){
+fun drawDebug(drawer: Drawer, seconds: Double = 0.0, intersections: Boolean = false, direction: Boolean = false, sightRadius: Boolean = false, targetsInRange: Boolean = false, drawGrid: Boolean = false, fps: Boolean = false){
 
     if (drawGrid) drawGrid(drawer)
+    if (fps) drawFPS(drawer, seconds)
 
     if (selectedEntity != null){
         if (selectedEntity is Creature) {
@@ -109,10 +124,10 @@ fun drawDebug(drawer: Drawer, intersections: Boolean = false, direction: Boolean
     }
 
     for (c in creatures) {
-
         if (sightRadius) drawSightRadius(drawer, c)
         if (intersections) drawIntersections(drawer, c)
         if (direction) drawDirectionLine(drawer, c)
         if (targetsInRange) drawTargetLines(drawer, c)
+
     }
 }
