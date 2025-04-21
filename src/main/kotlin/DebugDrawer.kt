@@ -105,10 +105,16 @@ fun drawFPS(drawer: Drawer, seconds: Double) {
 }
 
 // Function for drawing various debugging helpers
-fun drawDebug(drawer: Drawer, seconds: Double = 0.0, intersections: Boolean = false, direction: Boolean = false, sightRadius: Boolean = false, targetsInRange: Boolean = false, drawGrid: Boolean = false, fps: Boolean = false){
+fun drawDebug(drawer: Drawer, seconds: Double = 0.0, intersections: Boolean = false, direction: Boolean = false, sightRadius: Boolean = false, targetsInRange: Boolean = false, drawGrid: Boolean = false, fps: Boolean = false, panOffset: Vector2 = Vector2.ZERO, zoom: Double = 1.0){
+
 
     if (drawGrid) drawGrid(drawer)
     if (fps) drawFPS(drawer, seconds)
+
+    // Apply zoom and pan transformations to all debug drawings
+    drawer.pushTransforms()
+    drawer.translate(panOffset)
+    drawer.scale(zoom)
 
     if (selectedEntity != null){
         if (selectedEntity is Creature) {
@@ -119,6 +125,7 @@ fun drawDebug(drawer: Drawer, seconds: Double = 0.0, intersections: Boolean = fa
             if (direction) drawDirectionLine(drawer, creature)
             if (targetsInRange) drawTargetLines(drawer, creature, 0.8, 1.0)
 
+            drawer.popTransforms()
             return
         }
     }
@@ -128,6 +135,7 @@ fun drawDebug(drawer: Drawer, seconds: Double = 0.0, intersections: Boolean = fa
         if (intersections) drawIntersections(drawer, c)
         if (direction) drawDirectionLine(drawer, c)
         if (targetsInRange) drawTargetLines(drawer, c)
-
     }
+
+    drawer.popTransforms()  // Pop the transformation after drawing all creatures
 }

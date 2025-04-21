@@ -14,4 +14,5 @@ interface Entity {
     var damage: Double
     var mass: Double
     var speciesName:  String
+    var myFoodType: FoodType
 }

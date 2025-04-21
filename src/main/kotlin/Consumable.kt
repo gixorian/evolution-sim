@@ -14,6 +14,7 @@ data class Consumable(
     override var damage: Double,
     override var mass: Double,
     override var speciesName: String,
+    override var myFoodType: FoodType,
     var nutrition: Double
 ) : Entity
 
@@ -26,4 +27,5 @@ data class ConsumableType(
     var nutrition: Double,
     var mass: Double,
     var speciesName: String,
+    var myFoodType: FoodType
 )

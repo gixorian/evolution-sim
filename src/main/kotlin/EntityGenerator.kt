@@ -11,12 +11,12 @@ const val CONSUMABLE_PATCH_SIZE = 100.0
 
 class EntityGenerator () {
 
-    fun generateConsumables (numConsumablesTypes: Int, numConsumablesPerPatch: Int, numConsumablePatches: Int = 1, patchSize: Double = CANVAS_HEIGHT.toDouble(), spawnPosition: Vector2? = null, color: ColorRGBa? = null, species: String? = null): MutableList<Consumable> {
+    fun generateConsumables (numConsumableTypes: Int, numConsumablesPerPatch: Int, numConsumablePatches: Int = 1, patchSize: Double = CANVAS_HEIGHT.toDouble(), foodType: FoodType, spawnPosition: Vector2? = null, color: ColorRGBa? = null, species: String? = null): MutableList<Consumable> {
         val newConsumables = mutableListOf<Consumable>()
 
         val consumableTypes = mutableListOf<ConsumableType>()
 
-        for (i in 0 until numConsumablesTypes) {
+        for (i in 0 until numConsumableTypes) {
 
             val radius = Random.nextDouble(4.0, 8.0)
             val mass = radius * Random.nextDouble(0.8, 1.2)
@@ -32,7 +32,8 @@ class EntityGenerator () {
                 damage = 0.0,
                 nutrition = mass * Random.nextDouble(1.0, 2.0),
                 mass = mass,
-                speciesName = speciesName
+                speciesName = speciesName,
+                myFoodType = foodType
             )
 
             consumableTypes.add(t)
@@ -64,7 +65,8 @@ class EntityGenerator () {
                     damage = consumableType.damage,
                     nutrition = consumableType.nutrition,
                     mass = consumableType.mass,
-                    speciesName = consumableType.speciesName
+                    speciesName = consumableType.speciesName,
+                    myFoodType = consumableType.myFoodType
                 )
                 c.myShape = Circle(c.position, c.radius).shape
                 newConsumables.add(c)

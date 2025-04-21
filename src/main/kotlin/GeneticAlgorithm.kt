@@ -5,12 +5,12 @@ class GeneticAlgorithm() {
     //val population = generateInitialPopulation()
 
     fun generateInitialPopulation (
-        speciesRange: Pair<Int, Int> = Pair(5, 15),
-        creaturesPerSpeciesRange: Pair<Int, Int> = Pair(10, 20),
+        speciesRange: IntRange = 5..15,
+        creaturesPerSpeciesRange: IntRange = 10..20,
         ): MutableList<Creature> {
 
-        val numSpecies = Random.nextInt(speciesRange.first, speciesRange.second)
-        val numCreaturesPerSpecies = Random.nextInt(creaturesPerSpeciesRange.first, creaturesPerSpeciesRange.second)
+        val numSpecies = Random.nextInt(speciesRange.first, speciesRange.last)
+        val numCreaturesPerSpecies = Random.nextInt(creaturesPerSpeciesRange.first, creaturesPerSpeciesRange.last)
 
         return EntityGenerator().generateCreatures(numSpecies, numCreaturesPerSpecies)
     }

@@ -28,19 +28,23 @@ class Creature(
         dna.getValue(GeneKey.ColorG),
         dna.getValue(GeneKey.ColorB)
     ),
+    override var myFoodType: FoodType = FoodType.MEAT,
 
     // DNA derived values
     var energy: Double = mass * dna.getValue(GeneKey.EnergyModifier),
-    private var behaviourBias: Int = dna.getValue(GeneKey.BehaviourBias),
-    private var behaviourBiasWeight: Double = dna.getValue(GeneKey.BehaviourBiasWeight),
+    var behaviourBias: Int = dna.getValue(GeneKey.BehaviourBias),
+    var behaviourBiasWeight: Double = dna.getValue(GeneKey.BehaviourBiasWeight),
     private val attackCooldown: Double = dna.getValue(GeneKey.AttackCooldown),
     private var changeDirectionCooldown: Int = dna.getValue(GeneKey.ChangeDirectionCooldown),
     var sightDistance: Double = dna.getValue(GeneKey.SightDistance),
     var sightRadius: Double = dna.getValue(GeneKey.SightRadius),
     private var speed: Double = EntityGenerator().quadraticInverse(
         radius, dna.getValue(GeneKey.SpeedModifier),
-        RADIUS_RANGE, SPEED_MODIFIER_RANGE, SPEED_RANGE
+        Pair(RADIUS_RANGE.start, RADIUS_RANGE.endInclusive),
+        Pair(SPEED_MODIFIER_RANGE.start, SPEED_MODIFIER_RANGE.endInclusive),
+        Pair(SPEED_RANGE.start, SPEED_RANGE.endInclusive)
     ),
+    var myDiet: FoodType = dna.getValue(GeneKey.Diet),
 
     // Creature specific values
     var direction: Vector2,
@@ -52,12 +56,15 @@ class Creature(
     var targetsInRange: MutableList<Entity> = mutableListOf(),
     var target: Entity? = null,
     private var morphSpeed: Double = speed/20.0,
-    var currAttackCooldown: Double = 0.0
+    var currAttackCooldown: Double = 0.0,
 
 
 ) : Entity {
 
     private fun attack (other: Entity) {
+
+        other.health -= this.damage
+
         if (other is Creature) energy -= other.mass * Random.nextDouble(0.01, 0.025)
         else if (other is Consumable) energy += other.nutrition
 
@@ -67,7 +74,18 @@ class Creature(
             if(other is Creature) {
                 deadCreatures.add(other)
                 // Generate food when a creature dies
-                consumables.addAll(EntityGenerator().generateConsumables(1, (other.mass * 0.5).toInt(), 1, other.radius, other.position, other.primaryColor, other.speciesName))
+                consumables.addAll(
+                    EntityGenerator().generateConsumables(
+                        numConsumableTypes = 1,
+                        numConsumablesPerPatch = (other.mass * 0.5).toInt(),
+                        numConsumablePatches = 1,
+                        patchSize = other.radius,
+                        spawnPosition = other.position,
+                        color = other.primaryColor,
+                        species = other.speciesName,
+                        foodType = FoodType.MEAT
+                    ),
+                )
             } else if (other is Consumable) {
                 deadConsumables.add(other)
             }
@@ -156,19 +174,24 @@ class Creature(
                 if (targetDetection(this, other)) {
                     // Sanity check to make sure that the other creature really is withing this creature's sight cone and there are intersections between them
                     if (this.myShape.intersections(other.myShape).isNotEmpty())
-                    // At this point we know that the creatures are colliding and that the other creature is withing this creature's sight cone so we are processing the damage between them
-                        this.processDamage(other)
+                    // At this point we know that the creatures are colliding and that the other creature is within this creature's sight cone so we are checking if the creature wants to attack
+
+                        if (this.isMyFoodType(other))
+                            this.processDamage(other)
                 }
             }
         }
+    }
+
+    private fun isMyFoodType(other: Entity): Boolean {
+        return other.myFoodType === this.myDiet
     }
 
     // Process damage on collision
     private fun processDamage(defender: Entity) {
         if(this.currAttackCooldown > 0.0) return
 
-        this.currAttackCooldown  = this.attackCooldown
-        defender.health -= this.damage
+        this.currAttackCooldown = this.attackCooldown
 
         this.attack(defender)
     }
@@ -225,39 +248,37 @@ class Creature(
         val biasedDecision: Int
 
         if (this.targetsInRange.isEmpty()) {
-            biasedDecision = 0
             this.target = null
         }
         else {
-            randDecision = Random.nextInt(0, 3)
-            biasedDecision = if (random() >= this.behaviourBiasWeight) this.behaviourBias else randDecision
 
-            if (biasedDecision != 0){
+            if(this.target == null || !this.target!!.isAlive || this.target!! !in this.targetsInRange) {
+                randDecision = Random.nextInt(0, 3)
+                biasedDecision = if (random() >= this.behaviourBiasWeight) this.behaviourBias else randDecision
 
-                this.target =
-                    if (this.target == null || !this.target!!.isAlive)
-                        this.targetsInRange[Random.nextInt(0, this.targetsInRange.size)]
-                    else
-                        this.target!!
+                if (biasedDecision != 0)
+                    this.target = this.targetsInRange[Random.nextInt(0, this.targetsInRange.size)]
+                else
+                    this.target = null
+
+                when (biasedDecision) {
+                    0 -> { // Random Movement
+                        return Vector2(
+                            Random.nextDouble(-1.0, 1.0),
+                            Random.nextDouble(-1.0, 1.0)
+                        ).normalized
+                    }
+                    1 -> { // Move towards a target
+                        return (this.target!!.position - this.position).normalized
+                    }
+                    2 -> { // Move away from a target
+                        return (this.target!!.position - this.position).normalized * -1.0
+                    }
+                }
             }
         }
 
-        when (biasedDecision) {
-            0 -> { // Random Movement
-                return Vector2(
-                    Random.nextDouble(-1.0, 1.0),
-                    Random.nextDouble(-1.0, 1.0)
-                ).normalized
-            }
-            1 -> { // Move towards a target
-                return (this.target!!.position - this.position).normalized
-            }
-            2 -> { // Move away from a target
-                return (this.target!!.position - this.position).normalized * -1.0
-            }
-        }
-
-        return Vector2.ZERO
+        return this.direction
     }
 
     private fun moveShapeTo(target: Vector2): Shape {
